@@ -6,6 +6,8 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import os
 from tqdm import tqdm
 
+import pickle
+
 import nltk
 from nltk.tokenize import sent_tokenize
 
@@ -31,7 +33,7 @@ def seperate_sentence(sentence, chunk) :
             sentences.append(merged)
             merged = ""
         
-    if len(merged) > 256 :
+    if len(merged) > 256 or len(sentences) == 0:
         sentences.append(merged)
     elif len(merged) > 0 :
         sentences[-1] = sentences[-1] + merged
@@ -106,9 +108,11 @@ def infer(rank, world_size, model_name, dataframe, tokenizer, output_list, text_
             text = summarize_long_sentence(text, 1024, tokenizer, model.module, rank, max_tokens, min_tokens, num_beams, verify=False)
 
         local_outputs.append(text)
-            
-#tqdm.write(f"Rank {rank}, processing row {idx}")
 
+        if idx % 100 == 0 :
+            with open(f"summary_local_outputs_r{rank}_{idx}.pkl", 'wb') as file:
+                pickle.dump(local_outputs, file)
+            
     output_list[rank] = local_outputs
     
     cleanup()
